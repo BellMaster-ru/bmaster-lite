@@ -89,6 +89,25 @@ export type SettingsVolumeResponse = {
 export const getSettingsVolume = async () =>
 	(await api.get('settings/volume')).data;
 
+export type GpioState = {
+	enabled: boolean;
+	pin: number;
+	active_high: boolean;
+	off_delay: number;
+	chip: string | null;
+	available: boolean;
+	active: boolean;
+	detail: string | null;
+};
+
+export type GpioSettingsPatch = Partial<Pick<GpioState, 'enabled' | 'pin'>>;
+
+export const getGpioSettings = async () =>
+	(await api.get<GpioState>('settings/gpio')).data;
+
+export const updateGpioSettings = async (patch: GpioSettingsPatch) =>
+	(await api.put<GpioState>('settings/gpio', patch)).data;
+
 export const checkSchoolUpdates = async () => {
 	logSettingsApi('check_updates_start');
 	try {

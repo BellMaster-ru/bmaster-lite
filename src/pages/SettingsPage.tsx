@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { useEffect, useRef, useState } from 'react';
-import { Spinner } from 'react-bootstrap';
+import { Form, Spinner } from 'react-bootstrap';
 import { ArrowClockwise, Download, Power, Upload } from 'react-bootstrap-icons';
 import { useMutation } from '@tanstack/react-query';
 import Button from '@/components/Button';
-import { Name, Note, Value } from '@/components/text';
+import { H2, Name, Note, Value } from '@/components/text';
 import Panel from '@/components/Panel';
 import Field from '@/components/Field';
 import FileUploadButton from '@/components/FileUploadButton';
@@ -18,17 +18,25 @@ import {
 	checkSchoolUpdates,
 	downloadSchoolCertificate,
 	exportSchoolSettingsFile,
+	getGpioSettings,
 	getSchoolHealth,
 	getSettingsVolume,
+	type GpioSettingsPatch,
+	type GpioState,
 	importSchoolSettingsFile,
 	rebootSchoolDevice,
 	setSchoolVolume,
+	updateGpioSettings,
 	updateSchoolSoftware
 } from '@/api/school/settings';
 
 const HEALTH_POLL_INTERVAL_MS = 2000;
 const HEALTH_TIMEOUT_MS = 180000;
 const HEALTH_REQUEST_TIMEOUT_MS = 1500;
+
+const GPIO_PIN_MIN = 0;
+const GPIO_PIN_MAX = 53;
+const GPIO_PIN_FALLBACK = 17;
 
 const SettingsPage = () => {
 	const [showToast, setShowToast] = useState(false);
@@ -54,6 +62,11 @@ const SettingsPage = () => {
 	});
 
 	const [deviceVolume, setDeviceVolume] = useState(65);
+
+	const [isGpioLoaded, setIsGpioLoaded] = useState(false);
+	const [relayEnabled, setRelayEnabled] = useState(false);
+	const [relayPin, setRelayPin] = useState(GPIO_PIN_FALLBACK);
+	const [relayPinInput, setRelayPinInput] = useState(String(GPIO_PIN_FALLBACK));
 
 	const showPageToast = (
 		message: string,
@@ -117,6 +130,41 @@ const SettingsPage = () => {
 		};
 	}, []);
 
+	const applyGpioState = (state: GpioState) => {
+		setRelayEnabled(state.enabled === true);
+
+		const pinValue = Number(state.pin);
+		if (Number.isInteger(pinValue)) {
+			setRelayPin(pinValue);
+			setRelayPinInput(String(pinValue));
+		}
+	};
+
+	useEffect(() => {
+		let isActive = true;
+
+		const initGpio = async () => {
+			try {
+				const state = await getGpioSettings();
+				if (!isActive) {
+					return;
+				}
+				applyGpioState(state);
+				setIsGpioLoaded(true);
+			} catch {
+				if (isActive) {
+					showPageToast('Не удалось получить настройки режима реле', 'warning');
+				}
+			}
+		};
+
+		initGpio();
+
+		return () => {
+			isActive = false;
+		};
+	}, []);
+
 	useEffect(() => {
 		isMountedRef.current = true;
 		return () => {
@@ -159,6 +207,12 @@ const SettingsPage = () => {
 		mutationFn: (volume: number) => setSchoolVolume(volume),
 		onError: () =>
 			showPageToast('Не удалось отправить значение громкости', 'warning')
+	});
+
+	const gpioMutation = useMutation({
+		mutationKey: ['settings.gpio.update'],
+		mutationFn: (patch: GpioSettingsPatch) => updateGpioSettings(patch),
+		onSuccess: (state) => applyGpioState(state)
 	});
 
 	const certificateDownloadMutation = useMutation({
@@ -366,6 +420,60 @@ const SettingsPage = () => {
 		});
 	};
 
+	const handleRelayEnabledChange = (enabled: boolean) => {
+		const previousEnabled = relayEnabled;
+		setRelayEnabled(enabled);
+
+		gpioMutation.mutate(
+			{ enabled },
+			{
+				onError: () => {
+					setRelayEnabled(previousEnabled);
+					showPageToast('Не удалось изменить режим реле', 'warning');
+				}
+			}
+		);
+	};
+
+	const commitRelayPin = () => {
+		const rawValue = relayPinInput.trim();
+		const pinValue = Number(rawValue);
+		const isValidPin =
+			rawValue !== '' &&
+			Number.isInteger(pinValue) &&
+			pinValue >= GPIO_PIN_MIN &&
+			pinValue <= GPIO_PIN_MAX;
+
+		if (!isValidPin) {
+			setRelayPinInput(String(relayPin));
+			showPageToast(
+				`Пин GPIO должен быть целым числом от ${GPIO_PIN_MIN} до ${GPIO_PIN_MAX}`,
+				'warning'
+			);
+			return;
+		}
+
+		if (pinValue === relayPin) {
+			setRelayPinInput(String(relayPin));
+			return;
+		}
+
+		const previousPin = relayPin;
+		setRelayPin(pinValue);
+		setRelayPinInput(String(pinValue));
+
+		gpioMutation.mutate(
+			{ pin: pinValue },
+			{
+				onError: () => {
+					setRelayPin(previousPin);
+					setRelayPinInput(String(previousPin));
+					showPageToast('Не удалось сохранить пин GPIO', 'warning');
+				}
+			}
+		);
+	};
+
 	return (
 		<PageLayout pageTitle='Настройки' className='max-w-[36rem]'>
 			<Toast
@@ -476,6 +584,48 @@ const SettingsPage = () => {
 										{deviceVolume}%{isUpdatingVolume ? ' (сохранение...)' : ''}
 									</Note>
 								</Value>
+								</Field>
+
+								<Field className='border-y py-4 my-1 gap-3'>
+									<div className='flex items-center gap-4'>
+										<Form.Check
+											type='switch'
+											id='settings-relay-mode'
+											className='my-auto scale-125 origin-left'
+											disabled={!isGpioLoaded || gpioMutation.isPending}
+											checked={relayEnabled}
+											onChange={(e) => handleRelayEnabledChange(e.target.checked)}
+										/>
+										<H2 className='text-xl'>Режим реле</H2>
+									</div>
+
+									{relayEnabled && (
+										<Value className='space-y-2'>
+											<Name>Пин GPIO</Name>
+											<input
+												type='number'
+												min={GPIO_PIN_MIN}
+												max={GPIO_PIN_MAX}
+												step={1}
+												value={relayPinInput}
+												disabled={!isGpioLoaded}
+												onChange={(e) => setRelayPinInput(e.target.value)}
+												onBlur={() => commitRelayPin()}
+												onKeyDown={(e) => {
+													if (e.key === 'Enter') {
+														e.currentTarget.blur();
+													} else if (e.key === 'Escape') {
+														setRelayPinInput(String(relayPin));
+														e.currentTarget.blur();
+													}
+												}}
+												className='w-full rounded-lg border-2 bg-gray-50 p-2 text-base'
+											/>
+											<Note>
+												Допустимые значения: {GPIO_PIN_MIN}–{GPIO_PIN_MAX}.
+											</Note>
+										</Value>
+									)}
 								</Field>
 
 								<div className='grid grid-cols-1 gap-2'>
