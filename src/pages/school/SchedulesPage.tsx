@@ -59,7 +59,6 @@ import {
 	XOctagon,
 	XSquareFill
 } from 'react-bootstrap-icons';
-import { Typeahead } from 'react-bootstrap-typeahead';
 import { Panel } from '@/components/Panel';
 import { H2, Name, Note, Value } from '@/components/text';
 import PageLayout from '@/components/PageLayout';
@@ -181,19 +180,20 @@ const LessonCard = ({
 					<Name>Звук (начало)</Name>
 					<Value>
 						{editingLessons ? (
-							<Typeahead
-								className='border-none'
-								disabled={!editingLessons}
-								emptyLabel='не найдено'
-								selected={lesson.start_sound ? [lesson.start_sound] : []}
-								onChange={(selected) => {
-									const val = selected[0] as string | undefined;
-									lesson.start_sound = val;
+							<Form.Select
+								value={lesson.start_sound || ''}
+								onChange={(e) => {
+									lesson.start_sound = e.target.value;
 									updateEditingLessons();
 								}}
-								options={soundNameList}
-								placeholder='отсутствует'
-							/>
+							>
+								<option value=''>отсутствует</option>
+								{soundNameList.map((name) => (
+									<option key={name} value={name}>
+										{name}
+									</option>
+								))}
+							</Form.Select>
 						) : (
 							lesson.start_sound || (
 								<label className='text-gray-500'>отсутствует</label>
@@ -231,19 +231,20 @@ const LessonCard = ({
 					<Name>Звук (конец)</Name>
 					<Value>
 						{editingLessons ? (
-							<Typeahead
-								className='border-none'
-								disabled={!editingLessons}
-								emptyLabel='не найдено'
-								selected={lesson.end_sound ? [lesson.end_sound] : []}
-								onChange={(selected) => {
-									const val = selected[0] as string | undefined;
-									lesson.end_sound = val;
+							<Form.Select
+								value={lesson.end_sound || ''}
+								onChange={(e) => {
+									lesson.end_sound = e.target.value;
 									updateEditingLessons();
 								}}
-								options={soundNameList}
-								placeholder='отсутствует'
-							/>
+							>
+								<option value=''>отсутствует</option>
+								{soundNameList.map((name) => (
+									<option key={name} value={name}>
+										{name}
+									</option>
+								))}
+							</Form.Select>
 						) : (
 							lesson.end_sound || (
 								<label className='text-gray-500'>отсутствует</label>
@@ -300,19 +301,20 @@ const PrecallCard = ({
 					<Name>Звук</Name>
 					<Value>
 						{editingPrecalls ? (
-							<Typeahead
-								className='border-none'
-								disabled={!editingPrecalls}
-								emptyLabel='не найдено'
-								selected={precall.sound_name ? [precall.sound_name] : []}
-								onChange={(selected) => {
-									const val = selected[0] as string | undefined;
-									precall.sound_name = val || '';
+							<Form.Select
+								value={precall.sound_name || ''}
+								onChange={(e) => {
+									precall.sound_name = e.target.value;
 									updateEditingPrecalls();
 								}}
-								options={soundNameList}
-								placeholder='отсутствует'
-							/>
+							>
+								<option value=''>отсутствует</option>
+								{soundNameList.map((name) => (
+									<option key={name} value={name}>
+										{name}
+									</option>
+								))}
+							</Form.Select>
 						) : (
 							precall.sound_name || (
 								<label className='text-gray-500'>отсутствует</label>
