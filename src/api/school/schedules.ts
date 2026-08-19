@@ -7,20 +7,28 @@ export type ScheduleLesson = {
 	end_sound: string;
 };
 
+export type SchedulePrecall = {
+	sound_name: string;
+	minutes_before: number;
+};
+
 export type ScheduleInfo = {
 	id: number;
 	name: string;
 	lessons: ScheduleLesson[];
+	precalls: SchedulePrecall[];
 };
 
 export type ScheduleCreateRequest = {
 	name: string;
 	lessons: ScheduleLesson[];
+	precalls?: SchedulePrecall[];
 };
 
 export type ScheduleUpdateRequest = {
 	name?: string;
 	lessons?: ScheduleLesson[];
+	precalls?: SchedulePrecall[];
 };
 
 export const getSchedules = async (): Promise<ScheduleInfo[]> =>

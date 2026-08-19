@@ -5,6 +5,7 @@ import {
 	getSchedules,
 	ScheduleInfo,
 	ScheduleLesson,
+	SchedulePrecall,
 	ScheduleUpdateRequest,
 	deleteSchedule,
 	dupeSchedule
@@ -72,6 +73,13 @@ export type SchedulesContextData = {
 	editingLessons: ScheduleLesson[];
 	updateEditingLessons: () => void;
 	setEditingLessons: (x: ScheduleLesson[]) => void;
+	touch: () => void;
+};
+
+export type PrecallsContextData = {
+	editingPrecalls: SchedulePrecall[];
+	updateEditingPrecalls: () => void;
+	setEditingPrecalls: (x: SchedulePrecall[]) => void;
 	touch: () => void;
 };
 
@@ -248,6 +256,95 @@ const LessonCard = ({
 	);
 };
 
+/* ---------------- PrecallCard ---------------- */
+const PrecallCard = ({
+	precall_num,
+	precall,
+	ctx,
+	...attrs
+}: {
+	precall_num: number;
+	precall: SchedulePrecall;
+	ctx: PrecallsContextData;
+} & React.HTMLAttributes<HTMLDivElement>) => {
+	const { soundNameList } = useSounds();
+
+	const { editingPrecalls, updateEditingPrecalls } = ctx;
+
+	const onDelete = () => {
+		if (!editingPrecalls) return;
+		editingPrecalls.splice(precall_num, 1);
+		updateEditingPrecalls();
+	};
+
+	return (
+		<Panel className='flex flex-col rounded-lg' {...attrs}>
+			<Panel.Header className='flex items-center gap-3 p-3'>
+				<div className='flex items-baseline gap-2'>
+					<Value>{precall_num + 1}</Value>
+					<Name>предзвонок</Name>
+				</div>
+
+				{editingPrecalls && (
+					<button
+						className='ml-auto p-2 border-1 rounded-md border-gray-300 text-gray-300 hover:text-red-500 hover:border-red-500'
+						onClick={onDelete}
+					>
+						<Trash size='1rem' />
+					</button>
+				)}
+			</Panel.Header>
+
+			<div className='flex flex-col gap-4 p-3 bg-blue-50'>
+				<Field>
+					<Name>Звук</Name>
+					<Value>
+						{editingPrecalls ? (
+							<Typeahead
+								className='border-none'
+								disabled={!editingPrecalls}
+								emptyLabel='не найдено'
+								selected={precall.sound_name ? [precall.sound_name] : []}
+								onChange={(selected) => {
+									const val = selected[0] as string | undefined;
+									precall.sound_name = val || '';
+									updateEditingPrecalls();
+								}}
+								options={soundNameList}
+								placeholder='отсутствует'
+							/>
+						) : (
+							precall.sound_name || (
+								<label className='text-gray-500'>отсутствует</label>
+							)
+						)}
+					</Value>
+				</Field>
+
+				<Field>
+					<Name>Время до (мин)</Name>
+					<Value>
+						{editingPrecalls ? (
+							<input
+								type='number'
+								min={0}
+								value={precall.minutes_before}
+								onChange={(e) => {
+									precall.minutes_before = Number(e.target.value);
+									updateEditingPrecalls();
+								}}
+								className='w-24 px-2 py-1 border rounded border-gray-200'
+							/>
+						) : (
+							precall.minutes_before
+						)}
+					</Value>
+				</Field>
+			</div>
+		</Panel>
+	);
+};
+
 const SchedulesPage = () => {
 	const schedulesQuery = useQuery({
 		queryFn: () => getSchedules(),
@@ -277,6 +374,11 @@ const SchedulesPage = () => {
 	);
 	const isEditing = editingLessons !== null;
 
+	// draft copy of original schedule's precalls, mirrors editingLessons above
+	const [editingPrecalls, setEditingPrecalls] = useState<
+		SchedulePrecall[] | null
+	>(null);
+
 	const [menuScheduleId, setMenuScheduleId] = useState<number | null>(null);
 	const [scheduleToDelete, setScheduleToDelete] = useState<ScheduleInfo | null>(
 		null
@@ -299,10 +401,19 @@ const SchedulesPage = () => {
 		touch();
 	};
 
+	// call after any changes to precalls, rerenders list
+	const updateEditingPrecalls = () => {
+		setEditingPrecalls((prev) => Array.from(prev));
+		touch();
+	};
+
 	const cancelEditing = () => {
 		if (selectedSchedule !== null) {
 			setEditingLessons(
 				selectedSchedule.lessons.map((l) => Object.assign({}, l))
+			);
+			setEditingPrecalls(
+				(selectedSchedule.precalls || []).map((p) => Object.assign({}, p))
 			);
 			setUnsaved(false);
 		}
@@ -318,11 +429,20 @@ const SchedulesPage = () => {
 		updateEditingLessons();
 	};
 
+	const addPrecall = () => {
+		editingPrecalls.push({
+			sound_name: '',
+			minutes_before: 0
+		});
+		updateEditingPrecalls();
+	};
+
 	const [creatingSchedule, setCreatingSchedule] = useState<boolean>(false);
 
 	const createScheduleMutation = useMutation({
 		mutationKey: ['school.schedules.create'],
-		mutationFn: (name: string) => createSchedule({ name, lessons: [] }),
+		mutationFn: (name: string) =>
+			createSchedule({ name, lessons: [], precalls: [] }),
 		onSuccess: () => {
 			setCreatingSchedule(false);
 			queryClient.invalidateQueries(['school.schedules']);
@@ -332,7 +452,10 @@ const SchedulesPage = () => {
 	const saveScheduleLessonsMutation = useMutation({
 		mutationKey: ['school.schedules.save'],
 		mutationFn: () =>
-			updateSchedule(selectedScheduleId, { lessons: editingLessons }),
+			updateSchedule(selectedScheduleId, {
+				lessons: editingLessons,
+				precalls: editingPrecalls
+			}),
 		onSuccess: () => {
 			setUnsaved(false);
 			queryClient.invalidateQueries(['school.schedules']);
@@ -376,11 +499,15 @@ const SchedulesPage = () => {
 		setUnsaved(false);
 		if (selectedScheduleId === null) {
 			setEditingLessons(null);
+			setEditingPrecalls(null);
 		} else {
 			if (selectedSchedule !== null) {
-				// deep copy of the original schedule lessons
+				// deep copy of the original schedule lessons and precalls
 				setEditingLessons(
 					selectedSchedule.lessons.map((l) => Object.assign({}, l))
+				);
+				setEditingPrecalls(
+					(selectedSchedule.precalls || []).map((p) => Object.assign({}, p))
 				);
 			}
 			// ignore if original schedule was lost
@@ -415,9 +542,16 @@ const SchedulesPage = () => {
 		touch
 	};
 
+	const pctx: PrecallsContextData = {
+		editingPrecalls,
+		setEditingPrecalls,
+		updateEditingPrecalls,
+		touch
+	};
+
 		return (
-			<PageLayout pageTitle='Расписания' className='max-w-[56rem]'>
-				<div className='grid grid-cols-1 gap-4 xl:min-h-[40rem] xl:grid-cols-[20rem_minmax(0,32rem)] xl:justify-center xl:gap-6'>
+			<PageLayout pageTitle='Расписания' className='max-w-[78rem]'>
+				<div className='grid grid-cols-1 gap-4 xl:min-h-[40rem] xl:grid-cols-[20rem_minmax(0,32rem)_20rem] xl:justify-center xl:gap-6'>
 					<Panel className='min-w-0 mb-auto overflow-visible xl:min-w-[20rem]'>
 					<Panel.Header>
 						<H2>Список</H2>
@@ -627,6 +761,40 @@ const SchedulesPage = () => {
 								</Button>
 						</div>
 					)}
+					</Panel>
+					<Panel className='w-full min-w-0 xl:max-w-[20rem]'>
+					<Panel.Header>
+						<H2>Предзвонки</H2>
+					</Panel.Header>
+					<Panel.Body className='flex flex-col gap-3'>
+						{editingPrecalls ? (
+							editingPrecalls.length ? (
+								editingPrecalls.map((precall, precall_num) => (
+									<PrecallCard
+										key={precall_num}
+										ctx={pctx}
+										precall={precall}
+										precall_num={precall_num}
+									/>
+								))
+							) : (
+								<Note>Нет предзвонков</Note>
+							)
+						) : (
+							<Note>Выберите расписание для редактирования</Note>
+						)}
+					</Panel.Body>
+						{editingPrecalls && (
+							<div className='border-t p-3'>
+								<Button
+									onClick={() => addPrecall()}
+									variant='secondary'
+									className='w-full justify-center'
+								>
+									<Plus size={24} /> Добавить
+								</Button>
+							</div>
+						)}
 					</Panel>
 				</div>
 				<DangerConfirmModal
