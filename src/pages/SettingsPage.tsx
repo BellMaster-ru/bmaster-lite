@@ -58,7 +58,8 @@ const SettingsPage = () => {
 	const [schoolSettings, setSchoolSettings] = useState({
 		schedules: true,
 		assignments: true,
-		overrides: true
+		overrides: true,
+		automations: true
 	});
 
 	const [deviceVolume, setDeviceVolume] = useState(65);
@@ -484,188 +485,226 @@ const SettingsPage = () => {
 				delay={4500}
 			/>
 
-			<Panel className='w-full'>
-					<Panel.Body className='p-5 flex flex-col gap-4'>
+			<div className='flex flex-col gap-4'>
+				<Panel className='w-full'>
+					<Panel.Header>
+						<H2>Экспорт и импорт настроек</H2>
+					</Panel.Header>
+					<Panel.Body className='flex flex-col gap-4'>
 						<Field>
-							<Name>Конфигурация</Name>
-							<Value className='flex flex-col gap-3'>
-								<div className='flex flex-col gap-2'>
-									<label className='flex items-center gap-2 text-sm'>
-										<input
-											type='checkbox'
-											checked={schoolSettings.schedules}
-											onChange={(e) =>
-												setSchoolSettings((prev) => ({
-													...prev,
-													schedules: e.target.checked
-												}))
-											}
-										/>
-										Расписания
-									</label>
-									<label className='flex items-center gap-2 text-sm'>
-										<input
-											type='checkbox'
-											checked={schoolSettings.assignments}
-											onChange={(e) =>
-												setSchoolSettings((prev) => ({
-													...prev,
-													assignments: e.target.checked
-												}))
-											}
-										/>
-										Назначения
-									</label>
-									<label className='flex items-center gap-2 text-sm'>
-										<input
-											type='checkbox'
-											checked={schoolSettings.overrides}
-											onChange={(e) =>
-												setSchoolSettings((prev) => ({
-													...prev,
-													overrides: e.target.checked
-												}))
-											}
-										/>
-										Переопределения
-									</label>
-								</div>
-
-								<div className='flex items-start gap-3'>
-									<FileUploadButton
-										className='w-full py-2 h-9 flex items-center justify-center gap-2'
-										variant='success'
-										handleFile={(file) => settingsImportMutation.mutate(file)}
-										disabled={
-											settingsImportMutation.isPending || settingsExportMutation.isPending
+							<Name>Что включить</Name>
+							<Value className='flex flex-col gap-2'>
+								<label className='flex items-center gap-2 text-sm font-normal'>
+									<input
+										type='checkbox'
+										checked={schoolSettings.schedules}
+										onChange={(e) =>
+											setSchoolSettings((prev) => ({
+												...prev,
+												schedules: e.target.checked
+											}))
 										}
-										input={{ accept: '.json,application/json' }}
-									>
-										{settingsImportMutation.isPending ? (
-											<Spinner animation='border' size='sm' />
-										) : (
-											<Download className='w-4 h-4 shrink-0' />
-										)}
-										{settingsImportMutation.isPending ? 'Импорт...' : 'Импорт'}
-									</FileUploadButton>
-
-									<Button
-										className='w-full py-2 h-9 flex items-center justify-center gap-2'
-										variant='primary'
-										onClick={() => settingsExportMutation.mutate()}
-										disabled={
-											settingsExportMutation.isPending || settingsImportMutation.isPending
+									/>
+									Расписания
+								</label>
+								<label className='flex items-center gap-2 text-sm font-normal'>
+									<input
+										type='checkbox'
+										checked={schoolSettings.assignments}
+										onChange={(e) =>
+											setSchoolSettings((prev) => ({
+												...prev,
+												assignments: e.target.checked
+											}))
 										}
-									>
-										{settingsExportMutation.isPending ? (
-											<Spinner animation='border' size='sm' />
-										) : (
-											<Upload className='w-4 h-4' />
-										)}
-										{settingsExportMutation.isPending ? 'Экспорт...' : 'Экспорт'}
-									</Button>
-								</div>
+									/>
+									Назначения
+								</label>
+								<label className='flex items-center gap-2 text-sm font-normal'>
+									<input
+										type='checkbox'
+										checked={schoolSettings.overrides}
+										onChange={(e) =>
+											setSchoolSettings((prev) => ({
+												...prev,
+												overrides: e.target.checked
+											}))
+										}
+									/>
+									Переопределения
+								</label>
+								<label className='flex items-center gap-2 text-sm font-normal'>
+									<input
+										type='checkbox'
+										checked={schoolSettings.automations}
+										onChange={(e) =>
+											setSchoolSettings((prev) => ({
+												...prev,
+												automations: e.target.checked
+											}))
+										}
+									/>
+									Автоматизации
+								</label>
 							</Value>
 						</Field>
-							<div className='pt-3 border-t space-y-3'>
-								<Field>
-									<Name>Громкость устройства</Name>
-								<Value className='space-y-2'>
-									<input
-										type='range'
-										min={0}
-										max={100}
-										step={1}
-										value={deviceVolume}
-										onChange={(e) => handleVolumeChange(Number(e.target.value))}
-										className='w-full'
-									/>
-									<Note>
-										{deviceVolume}%{isUpdatingVolume ? ' (сохранение...)' : ''}
-									</Note>
-								</Value>
-								</Field>
 
-								<Field className='border-y py-4 my-1 gap-3'>
-									<div className='flex items-center gap-4'>
-										<Form.Check
-											type='switch'
-											id='settings-relay-mode'
-											className='my-auto scale-125 origin-left'
-											disabled={!isGpioLoaded || gpioMutation.isPending}
-											checked={relayEnabled}
-											onChange={(e) => handleRelayEnabledChange(e.target.checked)}
-										/>
-										<H2 className='text-xl'>Режим реле</H2>
-									</div>
+						<div className='flex items-start gap-3'>
+							<FileUploadButton
+								className='w-full py-2 h-9 flex items-center justify-center gap-2'
+								variant='success'
+								handleFile={(file) => settingsImportMutation.mutate(file)}
+								disabled={
+									settingsImportMutation.isPending || settingsExportMutation.isPending
+								}
+								input={{ accept: '.json,application/json' }}
+							>
+								{settingsImportMutation.isPending ? (
+									<Spinner animation='border' size='sm' />
+								) : (
+									<Download className='w-4 h-4 shrink-0' />
+								)}
+								{settingsImportMutation.isPending ? 'Импорт...' : 'Импорт'}
+							</FileUploadButton>
 
-									{relayEnabled && (
-										<Value className='space-y-2'>
-											<Name>Пин GPIO</Name>
-											<input
-												type='number'
-												min={GPIO_PIN_MIN}
-												max={GPIO_PIN_MAX}
-												step={1}
-												value={relayPinInput}
-												disabled={!isGpioLoaded}
-												onChange={(e) => setRelayPinInput(e.target.value)}
-												onBlur={() => commitRelayPin()}
-												onKeyDown={(e) => {
-													if (e.key === 'Enter') {
-														e.currentTarget.blur();
-													} else if (e.key === 'Escape') {
-														setRelayPinInput(String(relayPin));
-														e.currentTarget.blur();
-													}
-												}}
-												className='w-full rounded-lg border-2 bg-gray-50 p-2 text-base'
-											/>
-											<Note>
-												Допустимые значения: {GPIO_PIN_MIN}–{GPIO_PIN_MAX}.
-											</Note>
-										</Value>
-									)}
-								</Field>
-
-								<div className='grid grid-cols-1 gap-2'>
-									<Button
-										variant='primary'
-										className='w-full'
-										onClick={() => checkUpdatesMutation.mutate()}
-										disabled={checkUpdatesMutation.isPending}
-									>
-										{checkUpdatesMutation.isPending ? (
-											<Spinner animation='border' size='sm' />
-										) : (
-											<ArrowClockwise />
-										)}
-										Проверить обновления
-									</Button>
-									<Button
-										variant='danger'
-										className='w-full'
-										onClick={() => setShowRebootConfirm(true)}
-										disabled={rebootMutation.isPending}
-									>
-										<Power />
-										Перезагрузить сервер
-									</Button>
-
-									<Button
-										variant='success'
-										className='w-full'
-										onClick={() => certificateDownloadMutation.mutate()}
-										disabled={certificateDownloadMutation.isPending}
-									>
-										<Download/>
-										Скачать сертификат
-									</Button>
-									<Note>Чтобы убрать предупреждение о самоподписанном сертификате - скачайте сертификат по кнопке выше и доверьтесь ему.</Note>
-								</div>
+							<Button
+								className='w-full py-2 h-9 flex items-center justify-center gap-2'
+								variant='primary'
+								onClick={() => settingsExportMutation.mutate()}
+								disabled={
+									settingsExportMutation.isPending || settingsImportMutation.isPending
+								}
+							>
+								{settingsExportMutation.isPending ? (
+									<Spinner animation='border' size='sm' />
+								) : (
+									<Upload className='w-4 h-4' />
+								)}
+								{settingsExportMutation.isPending ? 'Экспорт...' : 'Экспорт'}
+							</Button>
 						</div>
 					</Panel.Body>
-			</Panel>
+				</Panel>
+
+				<Panel className='w-full'>
+					<Panel.Header>
+						<H2>Устройство</H2>
+					</Panel.Header>
+					<Panel.Body className='flex flex-col gap-4'>
+						<Field>
+							<Name>Громкость устройства</Name>
+							<Value className='space-y-2'>
+								<input
+									type='range'
+									min={0}
+									max={100}
+									step={1}
+									value={deviceVolume}
+									onChange={(e) => handleVolumeChange(Number(e.target.value))}
+									className='w-full'
+								/>
+								<Note>
+									{deviceVolume}%{isUpdatingVolume ? ' (сохранение...)' : ''}
+								</Note>
+							</Value>
+						</Field>
+
+						<Field className='border-t pt-4 gap-3'>
+							<div className='flex items-center gap-3'>
+								<Form.Check
+									type='switch'
+									id='settings-relay-mode'
+									className='my-auto scale-110'
+									disabled={!isGpioLoaded || gpioMutation.isPending}
+									checked={relayEnabled}
+									onChange={(e) => handleRelayEnabledChange(e.target.checked)}
+								/>
+								<Name className='text-sm'>Режим реле</Name>
+							</div>
+
+							{relayEnabled && (
+								<Value className='space-y-2'>
+									<Name>Пин GPIO</Name>
+									<input
+										type='number'
+										min={GPIO_PIN_MIN}
+										max={GPIO_PIN_MAX}
+										step={1}
+										value={relayPinInput}
+										disabled={!isGpioLoaded}
+										onChange={(e) => setRelayPinInput(e.target.value)}
+										onBlur={() => commitRelayPin()}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter') {
+												e.currentTarget.blur();
+											} else if (e.key === 'Escape') {
+												setRelayPinInput(String(relayPin));
+												e.currentTarget.blur();
+											}
+										}}
+										className='w-full rounded-lg border-2 bg-gray-50 p-2 text-base'
+									/>
+									<Note>
+										Допустимые значения: {GPIO_PIN_MIN}–{GPIO_PIN_MAX}.
+									</Note>
+								</Value>
+							)}
+						</Field>
+					</Panel.Body>
+				</Panel>
+
+				<Panel className='w-full'>
+					<Panel.Header>
+						<H2>Обслуживание</H2>
+					</Panel.Header>
+					<Panel.Body className='flex flex-col gap-3'>
+						<Button
+							variant='primary'
+							className='w-full'
+							onClick={() => checkUpdatesMutation.mutate()}
+							disabled={checkUpdatesMutation.isPending}
+						>
+							{checkUpdatesMutation.isPending ? (
+								<Spinner animation='border' size='sm' />
+							) : (
+								<ArrowClockwise />
+							)}
+							Проверить обновления
+						</Button>
+
+						<Button
+							variant='success'
+							className='w-full'
+							onClick={() => certificateDownloadMutation.mutate()}
+							disabled={certificateDownloadMutation.isPending}
+						>
+							<Download />
+							Скачать сертификат
+						</Button>
+						<Note>
+							Чтобы убрать предупреждение о самоподписанном сертификате -
+							скачайте сертификат по кнопке выше и доверьтесь ему.
+						</Note>
+					</Panel.Body>
+				</Panel>
+
+				<Panel className='w-full border-red-200'>
+					<Panel.Header>
+						<H2 className='text-red-600'>Опасная зона</H2>
+					</Panel.Header>
+					<Panel.Body>
+						<Button
+							variant='danger'
+							className='w-full'
+							onClick={() => setShowRebootConfirm(true)}
+							disabled={rebootMutation.isPending}
+						>
+							<Power />
+							Перезагрузить сервер
+						</Button>
+					</Panel.Body>
+				</Panel>
+			</div>
 
 			<DangerConfirmModal
 				show={showRebootConfirm}

@@ -15,6 +15,7 @@ import {
 	Person,
 	PersonCircle,
 	PlayFill,
+	Repeat,
 	Wrench,
 } from 'react-bootstrap-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -26,6 +27,7 @@ import AnnouncementsPage from '@/pages/AnnouncementsPage';
 import SoundsPage from '@/pages/SoundsPage';
 import CalendarPage from '@/pages/school/CalendarPage';
 import SchedulesPage from '@/pages/school/SchedulesPage';
+import AutomationsPage from '@/pages/school/AutomationsPage';
 
 import TodayPage from '@/pages/school/TodayPage';
 import DraggableCard from '@/components/DraggableCard';
@@ -81,6 +83,14 @@ const SidebarNavLinks = ({
 			>
 				<CalendarDate size='1.25rem' />
 				{!collapsed && <span>Календарь</span>}
+			</NavLink>
+			<NavLink
+				to='/school/automations'
+				className={getLinkClassName}
+				onClick={onNavigate}
+			>
+				<Repeat size='1.25rem' />
+				{!collapsed && <span>Автоматизация</span>}
 			</NavLink>
 			<NavLink
 				to='/announcements'
@@ -313,6 +323,7 @@ export default function MainPage() {
 							<Route path='/school/today' element={<TodayPage />} />
 							<Route path='/school/schedules' element={<SchedulesPage />} />
 							<Route path='/school/calendar' element={<CalendarPage />} />
+							<Route path='/school/automations' element={<AutomationsPage />} />
 							<Route path='/announcements' element={<AnnouncementsPage />} />
 							<Route path='/sounds' element={<SoundsPage />} />
 							<Route path='/settings' element={<SettingsPage />} />

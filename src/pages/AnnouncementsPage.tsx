@@ -4,8 +4,8 @@ import { Mic, StopCircle } from 'react-bootstrap-icons';
 import { WS_BASE_URL } from '@/api';
 import { H2, Note } from '@/components/text';
 import Panel from '@/components/Panel';
-import Kbd from '@/components/Kbd';
 import PageLayout from '@/components/PageLayout';
+import { formatDurationMSS } from '@/utils';
 
 const RATE = 48000;
 const CHANNELS = 1;
@@ -65,6 +65,7 @@ export default function AnnouncementsPage() {
 	const [connection, setConnection] = useState<Connection | null>(null);
 	const [status, setStatus] = useState<BroadcastStatus>('idle');
 	const [error, setError] = useState<string | null>(null);
+	const [elapsedSeconds, setElapsedSeconds] = useState(0);
 	const connectionRef = useRef<Connection | null>(null);
 	const isStoppingRef = useRef(false);
 
@@ -73,6 +74,20 @@ export default function AnnouncementsPage() {
 	useEffect(() => {
 		connectionRef.current = connection;
 	}, [connection]);
+
+	// счётчик длительности текущего эфира
+	useEffect(() => {
+		if (status !== 'started') {
+			setElapsedSeconds(0);
+			return;
+		}
+		const startedAt = Date.now();
+		setElapsedSeconds(0);
+		const interval = window.setInterval(() => {
+			setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+		}, 1000);
+		return () => window.clearInterval(interval);
+	}, [status]);
 
 	const stop = async (
 		options: { closeSocket?: boolean; nextStatus?: BroadcastStatus } = {}
@@ -313,20 +328,35 @@ export default function AnnouncementsPage() {
 	};
 
 	return (
-		<PageLayout pageTitle='Объявления' className='max-w-2xl p-6'>
-
+		<PageLayout pageTitle='Объявления' className='max-w-md'>
 			<Panel>
-				<div className='p-8 bg-white'>
-					<div className='flex flex-col items-center gap-6'>
-						<div className='text-center'>
-							<H2>Вещание в эфир</H2>
-							<Note>
-								Нажмите большую кнопку ниже или используйте&nbsp;
-								<Kbd code='Space' />
-							</Note>
-						</div>
+				<Panel.Header className='flex flex-col gap-1'>
+					<H2>Прямой эфир</H2>
+					<Note>Голос прозвучит в колонках школы</Note>
+				</Panel.Header>
+				<Panel.Body className='bg-white flex flex-col items-center gap-6 py-12'>
+					{/* декоративные кольца (только во время эфира) + большая кнопка */}
+					<div
+						className='relative flex items-center justify-center'
+						style={{ width: 260, height: 260 }}
+					>
+						{status === 'started' &&
+							[0, 1, 2].map((ring) => (
+								<span
+									key={ring}
+									className='absolute rounded-full border-2 border-rose-300 sound-wave'
+									style={{
+										width: 150,
+										height: 150,
+										left: '50%',
+										top: '50%',
+										marginLeft: -75,
+										marginTop: -75,
+										animationDelay: `${ring * 0.6}s`
+									}}
+								/>
+							))}
 
-						{/* BIG CENTER BUTTON */}
 						<button
 							aria-pressed={status === 'started'}
 							aria-label={status === 'idle' ? 'Начать эфир' : 'Остановить эфир'}
@@ -335,8 +365,8 @@ export default function AnnouncementsPage() {
 							className={`relative flex items-center justify-center rounded-full transform transition-transform active:scale-95 focus:outline-none ring-0 shadow-md
                 ${
 									status === 'started'
-										? 'bg-rose-600 hover:bg-rose-700 pulse-announce'
-										: 'bg-blue-600 hover:bg-blue-600'
+										? 'bg-rose-600 hover:bg-rose-700'
+										: 'bg-blue-600 hover:bg-blue-700'
 								}
                 text-white`}
 							style={{ width: 140, height: 140 }}
@@ -358,56 +388,40 @@ export default function AnnouncementsPage() {
 								{status === 'error' && <StopCircle size={44} />}
 							</div>
 						</button>
+					</div>
 
+					<div className='flex flex-col items-center gap-2'>
 						<div className='flex flex-col sm:flex-row items-center gap-3'>
 							<div
 								className={`px-3 py-1 rounded-full text-sm font-medium ${statusBadgeClass()}`}
 							>
 								{statusLabel}
 							</div>
-							{error && <div className='text-sm text-red-600'>{error}</div>}
-						</div>
-
-						{/* bottom info + small instruction */}
-						<div className='w-full mt-2 text-center'>
-							<div className='inline-grid grid-cols-2 gap-4 text-sm text-slate-500 bg-slate-50 px-4 py-2 rounded-md'>
-								<div className='flex flex-col items-start'>
-									<div className='text-xs text-slate-400'>Кодек</div>
-									<div className='font-medium text-slate-700'>
-										{connection?.mimeType || 'n/a'}
-									</div>
+							{status === 'started' && (
+								<div className='font-mono text-sm text-slate-500'>
+									{formatDurationMSS(elapsedSeconds)}
 								</div>
-								<div className='flex flex-col items-end'>
-									<div className='text-xs text-slate-400'>Срез</div>
-									<div className='font-medium text-slate-700'>
-										{connection?.timesliceMs ?? TIMESLICE_MS} ms
-									</div>
-								</div>
-								<Note className='col-span-2 text-center text-xs mb-2'>
-									Логи и ошибки выводятся в консоль.
-								</Note>
-							</div>
+							)}
 						</div>
+						{error && <div className='text-sm text-red-600'>{error}</div>}
 					</div>
-				</div>
+				</Panel.Body>
 			</Panel>
 
 			<style>{`
-        /* pulse animation for active broadcast */
-        @keyframes pulseAnnounce {
-          0% { box-shadow: 0 0 0 0 rgba(0,0,0,0.0); transform: scale(1); }
-          50% { box-shadow: 0 0 0 14px rgba(0,0,0,0.03); transform: scale(1.02); }
-          100% { box-shadow: 0 0 0 0 rgba(0,0,0,0.0); transform: scale(1); }
+        /* расходящиеся кольца вокруг кнопки во время эфира: 2с волна + 2.5с пауза */
+        @keyframes soundWave {
+          0% { transform: scale(1); opacity: 0.5; }
+          44.4% { transform: scale(1.7); opacity: 0; }
+          100% { transform: scale(1.7); opacity: 0; }
         }
-        .pulse-announce {
-          animation: pulseAnnounce 1.8s infinite ease-in-out;
+        .sound-wave {
+          animation: soundWave 4.5s ease-out infinite;
         }
         /* accessible focus ring */
         button:focus { box-shadow: 0 0 0 6px rgba(37,99,235,0.12); }
-        /* kbd style (ensure visible on white bg) */
-        kbd { font-weight: 600; }
         @media (prefers-reduced-motion: reduce) {
-          .pulse-announce, .animate-spin { animation: none !important; }
+          .sound-wave, .animate-spin { animation: none !important; }
         }
       `}</style>
 		</PageLayout>

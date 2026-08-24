@@ -14,6 +14,7 @@ export type SchoolSettingsExportOptions = {
 	schedules: boolean;
 	assignments: boolean;
 	overrides: boolean;
+	automations: boolean;
 };
 
 const toBooleanParam = (value: boolean) => (value ? 'true' : 'false');
@@ -24,7 +25,8 @@ export const getSchoolSettingsExportUrl = (
 	const params = new URLSearchParams({
 		schedules: toBooleanParam(options.schedules),
 		assignments: toBooleanParam(options.assignments),
-		overrides: toBooleanParam(options.overrides)
+		overrides: toBooleanParam(options.overrides),
+		automations: toBooleanParam(options.automations)
 	});
 
 	return `${HTTP_BASE_URL}/api/settings/settings?${params.toString()}`;
@@ -44,7 +46,8 @@ export const exportSchoolSettingsFile = async (
 			params: {
 				schedules: options.schedules,
 				assignments: options.assignments,
-				overrides: options.overrides
+				overrides: options.overrides,
+				automations: options.automations
 			},
 			responseType: 'blob'
 		})
