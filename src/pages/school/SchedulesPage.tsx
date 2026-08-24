@@ -552,9 +552,9 @@ const SchedulesPage = () => {
 	};
 
 		return (
-			<PageLayout pageTitle='Расписания' className='max-w-[78rem]'>
-				<div className='grid grid-cols-1 gap-4 xl:min-h-[40rem] xl:grid-cols-[20rem_minmax(0,32rem)_20rem] xl:justify-center xl:gap-6'>
-					<Panel className='min-w-0 mb-auto overflow-visible xl:min-w-[20rem]'>
+			<PageLayout pageTitle='Расписания' className='max-w-[68rem]'>
+				<div className='grid grid-cols-1 gap-4 lg:items-start lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-6'>
+					<Panel className='min-w-0 overflow-visible lg:min-w-[18rem]'>
 					<Panel.Header>
 						<H2>Список</H2>
 					</Panel.Header>
@@ -665,7 +665,7 @@ const SchedulesPage = () => {
 							</div>
 						</Panel.Body>
 					</Panel>
-					<Panel className='w-full min-w-0 xl:max-w-[32rem]'>
+					<Panel className='w-full min-w-0'>
 					<Panel.Header>
 						<H2>
 							{selectedScheduleId ? (
@@ -679,124 +679,115 @@ const SchedulesPage = () => {
 							)}
 						</H2>
 					</Panel.Header>
-					<Panel.Body>
-						{editingLessons ? (
-							editingLessons.map((lesson, lesson_num) => {
-								let breakDisplay = null;
-								if (lesson_num !== 0) {
-									const prevLesson = editingLessons[lesson_num - 1];
-									const breakDuration =
-										lesson.start_at && prevLesson.end_at
-											? countMinutes(lesson.start_at) -
-											  countMinutes(prevLesson.end_at)
-											: null;
-									breakDisplay = (
-										<div
-											className={cn(
-												'flex items-center gap-3 py-2 px-4 text-gray-500',
-												breakDuration !== null &&
-													breakDuration > 0 &&
-													'text-red-500'
-											)}
-										>
-											<Name>Перемена</Name>
-											<Value>
-												{breakDuration !== null
-													? `${breakDuration} мин`
-													: '-- мин'}
-											</Value>
-											{/* {breakDuration < 1 && (
-												<div className='text-red-500 text-sm'>
-													пересечение времени
-												</div>
-											)} */}
-										</div>
-									);
-								}
 
-								return (
-									<div key={lesson_num}>
-										{breakDisplay}
-										<LessonCard
-											ctx={ctx}
-											lesson={lesson}
-											lesson_num={lesson_num}
-										/>
-									</div>
-								);
-							})
-						) : (
-							<Note>Выберите расписание для редактирования</Note>
-						)}
-					</Panel.Body>
-						{editingLessons && (
-							<div className='border-t p-3 flex flex-col-reverse justify-end gap-2 sm:flex-row'>
-								{unsaved && (
-									<div className='flex w-full gap-[0.15rem] sm:w-auto'>
-										<Button
-											className='w-1/3 rounded-r-none px-3 sm:w-auto'
-											variant='danger'
-											onClick={() => cancelEditing()}
-											disabled={saveScheduleLessonsMutation.isPending}
+					{editingLessons ? (
+						<Panel.Body className='p-0'>
+							<div className='grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_18rem]'>
+								<div className='flex flex-col gap-3 p-4'>
+									<Name>Уроки</Name>
+									{editingLessons.map((lesson, lesson_num) => {
+										let breakDisplay = null;
+										if (lesson_num !== 0) {
+											const prevLesson = editingLessons[lesson_num - 1];
+											const breakDuration =
+												lesson.start_at && prevLesson.end_at
+													? countMinutes(lesson.start_at) -
+													  countMinutes(prevLesson.end_at)
+													: null;
+											breakDisplay = (
+												<div
+													className={cn(
+														'flex items-center gap-3 py-2 px-4 text-gray-500',
+														breakDuration !== null &&
+															breakDuration > 0 &&
+															'text-red-500'
+													)}
+												>
+													<Name>Перемена</Name>
+													<Value>
+														{breakDuration !== null
+															? `${breakDuration} мин`
+															: '-- мин'}
+													</Value>
+												</div>
+											);
+										}
+
+										return (
+											<div key={lesson_num}>
+												{breakDisplay}
+												<LessonCard
+													ctx={ctx}
+													lesson={lesson}
+													lesson_num={lesson_num}
+												/>
+											</div>
+										);
+									})}
+									<Button
+										onClick={() => addLesson()}
+										variant='secondary'
+										className='w-full justify-center'
 									>
-										<XCircleFill size={24} />
-										</Button>
-										<Button
-											className='w-2/3 text-white rounded-l-none px-3 gap-[1rem] sm:w-auto'
-											onClick={() => saveScheduleLessonsMutation.mutate()}
-										>
-										{saveScheduleLessonsMutation.isPending ? (
-											<Spinner />
-										) : (
-											<FloppyFill size={24} />
-										)}
-										Сохранить
+										<Plus size={20} /> Добавить урок
 									</Button>
 								</div>
-							)}
-								<Button
-									onClick={() => addLesson()}
-									variant='secondary'
-									className='w-full justify-center sm:w-auto sm:px-8'
-								>
-									<Plus size={24} /> Добавить урок
-								</Button>
-						</div>
-					)}
-					</Panel>
-					<Panel className='w-full min-w-0 xl:max-w-[20rem]'>
-					<Panel.Header>
-						<H2>Предзвонки</H2>
-					</Panel.Header>
-					<Panel.Body className='flex flex-col gap-3'>
-						{editingPrecalls ? (
-							editingPrecalls.length ? (
-								editingPrecalls.map((precall, precall_num) => (
-									<PrecallCard
-										key={precall_num}
-										ctx={pctx}
-										precall={precall}
-										precall_num={precall_num}
-									/>
-								))
-							) : (
-								<Note>Нет предзвонков</Note>
-							)
-						) : (
+
+								<div className='flex flex-col gap-3 p-4 border-t bg-slate-50/60 xl:border-t-0 xl:border-l'>
+									<Name>Предзвонки</Name>
+									{editingPrecalls.length ? (
+										editingPrecalls.map((precall, precall_num) => (
+											<PrecallCard
+												key={precall_num}
+												ctx={pctx}
+												precall={precall}
+												precall_num={precall_num}
+											/>
+										))
+									) : (
+										<Note>Нет предзвонков</Note>
+									)}
+									<Button
+										onClick={() => addPrecall()}
+										variant='secondary'
+										className='w-full justify-center'
+									>
+										<Plus size={20} /> Добавить
+									</Button>
+								</div>
+							</div>
+						</Panel.Body>
+					) : (
+						<Panel.Body>
 							<Note>Выберите расписание для редактирования</Note>
-						)}
-					</Panel.Body>
-						{editingPrecalls && (
-							<div className='border-t p-3'>
+						</Panel.Body>
+					)}
+
+					{editingLessons && unsaved && (
+						<div className='border-t p-3 flex justify-end'>
+							<div className='flex w-full gap-[0.15rem] sm:w-auto'>
 								<Button
-									onClick={() => addPrecall()}
-									variant='secondary'
-									className='w-full justify-center'
+									className='w-1/3 rounded-r-none px-3 sm:w-auto'
+									variant='danger'
+									onClick={() => cancelEditing()}
+									disabled={saveScheduleLessonsMutation.isPending}
 								>
-									<Plus size={24} /> Добавить
+									<XCircleFill size={24} />
+								</Button>
+								<Button
+									className='w-2/3 text-white rounded-l-none px-3 gap-[1rem] sm:w-auto'
+									onClick={() => saveScheduleLessonsMutation.mutate()}
+								>
+									{saveScheduleLessonsMutation.isPending ? (
+										<Spinner />
+									) : (
+										<FloppyFill size={24} />
+									)}
+									Сохранить
 								</Button>
 							</div>
-						)}
+						</div>
+					)}
 					</Panel>
 				</div>
 				<DangerConfirmModal

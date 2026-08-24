@@ -112,7 +112,7 @@ const AutomationCard = ({
 	});
 
 	return (
-		<Panel className='flex flex-col rounded-lg'>
+		<Panel className='flex flex-col'>
 			<Panel.Header className='flex items-center gap-3 p-3'>
 				<Form.Check
 					type='switch'
