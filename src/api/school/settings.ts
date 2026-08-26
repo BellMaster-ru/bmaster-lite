@@ -135,6 +135,9 @@ export type CheckSchoolUpdatesResponse = {
 export type UpdateSchoolSoftwareResponse = {
 	ok?: boolean;
 	status?: string;
+	backend_updated?: boolean;
+	frontend_updated?: boolean;
+	dependencies_updated?: boolean;
 	detail?: string;
 };
 
@@ -186,6 +189,18 @@ export const rebootSchoolDevice = async () => {
 		return response;
 	} catch (error) {
 		logSettingsApi('reboot_error', error);
+		throw error;
+	}
+};
+
+export const restartSchoolService = async () => {
+	logSettingsApi('restart_start');
+	try {
+		const response = (await api.post('settings/restart')).data;
+		logSettingsApi('restart_success', response);
+		return response;
+	} catch (error) {
+		logSettingsApi('restart_error', error);
 		throw error;
 	}
 };

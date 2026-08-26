@@ -1,7 +1,13 @@
 // @ts-nocheck
 import { useEffect, useRef, useState } from 'react';
 import { Form, Spinner } from 'react-bootstrap';
-import { ArrowClockwise, Download, Power, Upload } from 'react-bootstrap-icons';
+import {
+	ArrowClockwise,
+	ArrowRepeat,
+	Download,
+	Power,
+	Upload
+} from 'react-bootstrap-icons';
 import { useMutation } from '@tanstack/react-query';
 import Button from '@/components/Button';
 import { H2, Name, Note, Value } from '@/components/text';
@@ -25,12 +31,13 @@ import {
 	type GpioState,
 	importSchoolSettingsFile,
 	rebootSchoolDevice,
+	restartSchoolService,
 	setSchoolVolume,
 	updateGpioSettings,
 	updateSchoolSoftware
 } from '@/api/school/settings';
 
-const HEALTH_POLL_INTERVAL_MS = 2000;
+const HEALTH_POLL_INTERVAL_MS = 1000;
 const HEALTH_TIMEOUT_MS = 180000;
 const HEALTH_REQUEST_TIMEOUT_MS = 1500;
 
@@ -45,6 +52,7 @@ const SettingsPage = () => {
 		'success'
 	);
 	const [showRebootConfirm, setShowRebootConfirm] = useState(false);
+	const [showRestartConfirm, setShowRestartConfirm] = useState(false);
 	const [showUpdateModal, setShowUpdateModal] = useState(false);
 	const [updatePhase, setUpdatePhase] = useState<UpdatePhase>('confirm');
 	const [updateErrorMessage, setUpdateErrorMessage] = useState('');
@@ -84,24 +92,15 @@ const SettingsPage = () => {
 	};
 
 	const closeUpdateModal = () => {
-		if (updatePhase === 'running' || updateFlowRunningRef.current) {
-			return;
-		}
-		setShowUpdateModal(false);
-		resetUpdateFlowState();
-	};
-
-	const openRebootConfirmFromUpdate = () => {
 		if (
 			updatePhase === 'running' ||
-			updateFlowRunningRef.current ||
-			updatePhase !== 'success'
+			updatePhase === 'restarting' ||
+			updateFlowRunningRef.current
 		) {
 			return;
 		}
 		setShowUpdateModal(false);
 		resetUpdateFlowState();
-		setShowRebootConfirm(true);
 	};
 
 	useEffect(() => {
@@ -369,6 +368,16 @@ const SettingsPage = () => {
 				return;
 			}
 
+			const isBackendUpdated = normalizedResponse?.backend_updated === true;
+
+			if (!isBackendUpdated) {
+				// Сервис не перезапускается, обновление уже применено.
+				setUpdatePhase('success');
+				return;
+			}
+
+			setUpdatePhase('restarting');
+
 			const isHealthReady = await waitForHealthReady(runId);
 			if (!isCurrentUpdateRun(runId)) {
 				return;
@@ -406,6 +415,16 @@ const SettingsPage = () => {
 			showPageToast('Команда перезагрузки отправлена. Сервер может быть недоступен в течение нескольких минут.', 'warning');
 		},
 		onError: () => showPageToast('Не удалось отправить команду перезагрузки', 'warning')
+	});
+
+	const restartServiceMutation = useMutation({
+		mutationKey: ['settings.restart'],
+		mutationFn: () => restartSchoolService(),
+		onSuccess: () => {
+			setShowRestartConfirm(false);
+			showPageToast('Команда перезапуска сервиса отправлена. Сервис может быть недоступен в течение минуты.', 'warning');
+		},
+		onError: () => showPageToast('Не удалось отправить команду перезапуска сервиса', 'warning')
 	});
 
 	const handleVolumeChange = (value: number) => {
@@ -692,7 +711,7 @@ const SettingsPage = () => {
 					<Panel.Header>
 						<H2 className='text-red-600'>Опасная зона</H2>
 					</Panel.Header>
-					<Panel.Body>
+					<Panel.Body className='flex flex-col gap-3'>
 						<Button
 							variant='danger'
 							className='w-full'
@@ -701,6 +720,15 @@ const SettingsPage = () => {
 						>
 							<Power />
 							Перезагрузить сервер
+						</Button>
+						<Button
+							variant='danger'
+							className='w-full'
+							onClick={() => setShowRestartConfirm(true)}
+							disabled={restartServiceMutation.isPending}
+						>
+							<ArrowRepeat />
+							Рестарт сервиса
 						</Button>
 					</Panel.Body>
 				</Panel>
@@ -722,6 +750,22 @@ const SettingsPage = () => {
 				onConfirm={() => rebootMutation.mutate()}
 				isPending={rebootMutation.isPending}
 			/>
+			<DangerConfirmModal
+				show={showRestartConfirm}
+				title='Подтверждение перезапуска'
+				description='Вы действительно хотите перезапустить сервис?'
+				warning={
+					<p className='text-red-600 text-sm'>
+						Во время перезапуска воспроизведение и управление будут временно
+						недоступны.
+					</p>
+				}
+				confirmText='Подтвердить перезапуск'
+				pendingText='Отправка...'
+				onCancel={() => setShowRestartConfirm(false)}
+				onConfirm={() => restartServiceMutation.mutate()}
+				isPending={restartServiceMutation.isPending}
+			/>
 			<UpdateSoftwareModal
 				show={showUpdateModal}
 				phase={updatePhase}
@@ -729,7 +773,6 @@ const SettingsPage = () => {
 				onClose={closeUpdateModal}
 				onConfirm={startUpdateFlow}
 				onRetry={startUpdateFlow}
-				onRequestReboot={openRebootConfirmFromUpdate}
 			/>
 		</PageLayout>
 	);

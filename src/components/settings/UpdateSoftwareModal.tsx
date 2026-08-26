@@ -2,7 +2,12 @@ import { Modal, Spinner } from 'react-bootstrap';
 import { CheckCircleFill, ExclamationTriangle } from 'react-bootstrap-icons';
 import Button from '@/components/Button';
 
-export type UpdatePhase = 'confirm' | 'running' | 'success' | 'error';
+export type UpdatePhase =
+	| 'confirm'
+	| 'running'
+	| 'restarting'
+	| 'success'
+	| 'error';
 const UPDATE_MODAL_DEBUG_NAMESPACE = '[settings/update-modal]';
 
 export type UpdateSoftwareModalProps = {
@@ -12,7 +17,6 @@ export type UpdateSoftwareModalProps = {
 	onClose: () => void;
 	onConfirm: () => void;
 	onRetry: () => void;
-	onRequestReboot: () => void;
 };
 
 const UpdateSoftwareModal = ({
@@ -21,10 +25,9 @@ const UpdateSoftwareModal = ({
 	errorMessage,
 	onClose,
 	onConfirm,
-	onRetry,
-	onRequestReboot
+	onRetry
 }: UpdateSoftwareModalProps) => {
-	const isRunning = phase === 'running';
+	const isRunning = phase === 'running' || phase === 'restarting';
 	const logUpdateModal = (event: string, payload?: unknown) => {
 		if (payload === undefined) {
 			console.log(UPDATE_MODAL_DEBUG_NAMESPACE, event);
@@ -46,11 +49,6 @@ const UpdateSoftwareModal = ({
 	const handleRetry = () => {
 		logUpdateModal('retry_click', { phase });
 		onRetry();
-	};
-
-	const handleRequestReboot = () => {
-		logUpdateModal('request_reboot_click', { phase });
-		onRequestReboot();
 	};
 
 	return (
@@ -93,10 +91,19 @@ const UpdateSoftwareModal = ({
 					</div>
 				)}
 
+				{phase === 'restarting' && (
+					<div className='flex items-center gap-2 text-slate-700'>
+						<Spinner animation='border' size='sm' />
+						<p className='font-medium m-0'>
+							Обновление установлено, сервис перезапускается...
+						</p>
+					</div>
+				)}
+
 				{phase === 'success' && (
 					<div className='flex items-center gap-3 text-emerald-700'>
 						<CheckCircleFill size={22} className='shrink-0' />
-						<p className='font-medium m-0'>Обновление успешно установлено. Рекомендуется перезагрузить сервер, чтобы применить изменения.</p>
+						<p className='font-medium m-0'>Обновление успешно установлено.</p>
 					</div>
 				)}
 
@@ -131,6 +138,13 @@ const UpdateSoftwareModal = ({
 					</Button>
 				)}
 
+				{phase === 'restarting' && (
+					<Button variant='secondary' disabled>
+						<Spinner animation='border' size='sm' />
+						Сервис перезапускается...
+					</Button>
+				)}
+
 					{phase === 'error' && (
 						<>
 							<Button variant='secondary' onClick={handleClose}>
@@ -141,14 +155,9 @@ const UpdateSoftwareModal = ({
 					)}
 
 					{phase === 'success' && (
-						<>
-							<Button variant='secondary' onClick={handleClose}>
-								Закрыть
-							</Button>
-							<Button variant='danger' onClick={handleRequestReboot}>
-								Перезагрузить сервер
-							</Button>
-						</>
+						<Button variant='secondary' onClick={handleClose}>
+							Закрыть
+						</Button>
 				)}
 			</Modal.Footer>
 		</Modal>
